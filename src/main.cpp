@@ -7,11 +7,13 @@
 #include <HTTPClient.h>
 
 String plant = "Panel1";
-int delayLoop = 5000;
+int delayLoop = 8000;
 
 // Variable Declaration
-float temperature = 0, pressure = 0;
-int response, sensor1_id = 0, sensor2_id = 0, sensor3_id = 0;
+float temperature1 = 0, pressure1 = 0;
+float temperature2 = 0, pressure2 = 0;
+float temperature3 = 0, pressure3 = 0;
+int response;
 float sensor1_warning = 0, sensor1_danger = 0;
 float sensor2_warning = 0, sensor2_danger = 0;
 float sensor3_warning = 0, sensor3_danger = 0;
@@ -36,8 +38,8 @@ float sensor3_warning = 0, sensor3_danger = 0;
 #define LED3_GREEN 2
 
 // SSID Declaration
-const char *ssid = "Deltakilo";
-const char *pass = "1sempak8";
+const char *ssid = "KP-Unilever";
+const char *pass = "smartfren";
 
 // API Declaration
 String baseUrl = "http://128.199.87.189/api";
@@ -91,6 +93,15 @@ void ledBlinking()
   digitalWrite(LED3_YELLOW, HIGH);
   digitalWrite(LED3_RED, HIGH);
   delay(500);
+  digitalWrite(LED1_GREEN, LOW);
+  digitalWrite(LED1_YELLOW, LOW);
+  digitalWrite(LED1_RED, LOW);
+  digitalWrite(LED2_GREEN, LOW);
+  digitalWrite(LED2_YELLOW, LOW);
+  digitalWrite(LED2_RED, LOW);
+  digitalWrite(LED3_GREEN, LOW);
+  digitalWrite(LED3_YELLOW, LOW);
+  digitalWrite(LED3_RED, LOW);
 }
 
 void bmpSetup()
@@ -199,24 +210,27 @@ void wifiConnect()
 
 String getPlantResponse()
 {
-  http.begin(baseUrl + "/panel_sensor/" + plant);
+  http.begin(baseUrl + "/" + plant + "/setpoint");
   http.GET();
   String response = http.getString();
 
   return response;
 }
 
-int postHttp(int id, float T, float P)
+int postHttp(float T1, float P1, float T2, float P2, float T3, float P3)
 {
-  http.begin(baseUrl + "/panel_sensor/temperature");
+  http.begin(baseUrl + "/" + plant);
   http.addHeader("Content-Type", "application/json");
 
   StaticJsonDocument<200> buff;
   String jsonParams;
 
-  buff["sensor_id"] = id;
-  buff["temperature"] = T;
-  buff["pressure"] = P;
+  buff["temperature1"] = T1;
+  buff["pressure1"] = P1;
+  buff["temperature2"] = T2;
+  buff["pressure2"] = P2;
+  buff["temperature3"] = T3;
+  buff["pressure3"] = P3;
   serializeJson(buff, jsonParams);
 
   int code = http.POST(jsonParams);
@@ -224,216 +238,135 @@ int postHttp(int id, float T, float P)
   return code;
 }
 
-void firstBMPReader(int temp_id, float temp_warning, float temp_danger)
+void firstBMPReader()
 {
-  temperature = bmp1.readTemperature();
-  pressure = bmp1.readPressure();
+  temperature1 = bmp1.readTemperature();
+  pressure1 = bmp1.readPressure();
 
-  if (temp_id != 0 || temp_warning != 0 || temp_danger != 0)
+  Serial.println("--------- BMP280 1 ---------");
+
+  Serial.print("Warning : ");
+  Serial.print(sensor1_warning);
+  Serial.print("  Danger : ");
+  Serial.println(sensor1_danger);
+
+  Serial.print("Temperature : ");
+  Serial.print(temperature1);
+  Serial.print("  Pressure : ");
+  Serial.println(pressure1);
+}
+
+void secondBMPReader()
+{
+  temperature2 = bmp2.readTemperature();
+  pressure2 = bmp2.readPressure();
+
+  Serial.println("--------- BMP280 2 ---------");
+
+  Serial.print("Warning : ");
+  Serial.print(sensor2_warning);
+  Serial.print("  Danger : ");
+  Serial.println(sensor2_danger);
+
+  Serial.print("Temperature : ");
+  Serial.print(temperature2);
+  Serial.print("  Pressure : ");
+  Serial.println(pressure2);
+}
+
+void thirdBMPReader()
+{
+  temperature3 = bmp3.readTemperature();
+  pressure3 = bmp3.readPressure();
+
+  Serial.println("--------- BMP280 3 ---------");
+
+  Serial.print("Warning : ");
+  Serial.print(sensor3_warning);
+  Serial.print("  Danger : ");
+  Serial.println(sensor3_danger);
+
+  Serial.print("Temperature : ");
+  Serial.print(temperature3);
+  Serial.print("  Pressure : ");
+  Serial.println(pressure3);
+}
+
+void firstBMPChecker()
+{
+  Serial.print("First BMP Result : ");
+  if (temperature1 < sensor1_warning)
   {
-    if (sensor1_id != temp_id || sensor1_warning != temp_warning || sensor1_danger != temp_danger)
-    {
-      sensor1_id = temp_id;
-      sensor1_warning = temp_warning;
-      sensor1_danger = temp_danger;
-    }
-    Serial.println("--------- BMP280 1 ---------");
-
-    Serial.print("BMP ID : ");
-    Serial.print(sensor1_id);
-    Serial.print("  Warning : ");
-    Serial.print(sensor1_warning);
-    Serial.print("  Danger : ");
-    Serial.println(sensor1_danger);
-
-    Serial.print("Temperature : ");
-    Serial.print(temperature);
-    Serial.print("  Pressure : ");
-    Serial.println(pressure);
-
-    response = postHttp(sensor1_id, temperature, pressure);
-    Serial.print("Code : ");
-    Serial.println(response);
-    Serial.println();
-
-    if (response > 0)
-    {
-      Serial.print("BMP Result : ");
-      if (temperature < sensor1_warning)
-      {
-        Serial.println("Safe");
-        digitalWrite(LED1_GREEN, HIGH);
-        digitalWrite(LED1_YELLOW, LOW);
-        digitalWrite(LED1_RED, LOW);
-      }
-      else if (temperature >= sensor1_danger)
-      {
-        Serial.println("DANGER!!");
-        digitalWrite(LED1_GREEN, LOW);
-        digitalWrite(LED1_YELLOW, LOW);
-        digitalWrite(LED1_RED, HIGH);
-      }
-      else if (temperature >= sensor1_warning && temperature < sensor1_danger)
-      {
-        Serial.println("WARNING");
-        digitalWrite(LED1_GREEN, LOW);
-        digitalWrite(LED1_YELLOW, HIGH);
-        digitalWrite(LED1_RED, LOW);
-      }
-      else
-      {
-        Serial.println("NO RESULT");
-        digitalWrite(LED1_GREEN, LOW);
-        digitalWrite(LED1_YELLOW, LOW);
-        digitalWrite(LED1_RED, HIGH);
-      }
-    }
-    else
-    {
-      ledBlinking();
-    }
+    Serial.println("Safe");
+    digitalWrite(LED1_GREEN, HIGH);
+    digitalWrite(LED1_YELLOW, LOW);
+    digitalWrite(LED1_RED, LOW);
+  }
+  else if (temperature1 >= sensor1_danger)
+  {
+    Serial.println("DANGER!!");
+    digitalWrite(LED1_GREEN, LOW);
+    digitalWrite(LED1_YELLOW, LOW);
+    digitalWrite(LED1_RED, HIGH);
+  }
+  else if (temperature1 >= sensor1_warning && temperature1 < sensor1_danger)
+  {
+    Serial.println("WARNING");
+    digitalWrite(LED1_GREEN, LOW);
+    digitalWrite(LED1_YELLOW, HIGH);
+    digitalWrite(LED1_RED, LOW);
   }
 }
 
-void secondBMPReader(int temp_id, float temp_warning, float temp_danger)
+void secondBMPChecker()
 {
-  temperature = bmp2.readTemperature();
-  pressure = bmp2.readPressure();
-
-  if (temp_id != 0 || temp_warning != 0 || temp_danger != 0)
+  Serial.print("Second BMP Result : ");
+  if (temperature2 < sensor2_warning)
   {
-    if (sensor2_id != temp_id || sensor2_warning != temp_warning || sensor2_danger != temp_danger)
-    {
-      sensor2_id = temp_id;
-      sensor2_warning = temp_warning;
-      sensor2_danger = temp_danger;
-    }
-    Serial.println("--------- BMP280 2 ---------");
-
-    Serial.print("BMP ID : ");
-    Serial.print(sensor2_id);
-    Serial.print("  Warning : ");
-    Serial.print(sensor2_warning);
-    Serial.print("  Danger : ");
-    Serial.println(sensor2_danger);
-
-    Serial.print("Temperature : ");
-    Serial.print(temperature);
-    Serial.print("  Pressure : ");
-    Serial.println(pressure);
-
-    response = postHttp(sensor2_id, temperature, pressure);
-    Serial.print("Code : ");
-    Serial.println(response);
-    Serial.println();
-
-    if (response > 0)
-    {
-      Serial.print("BMP Result : ");
-      if (temperature < sensor2_warning)
-      {
-        Serial.println("Safe");
-        digitalWrite(LED2_GREEN, HIGH);
-        digitalWrite(LED2_YELLOW, LOW);
-        digitalWrite(LED2_RED, LOW);
-      }
-      else if (temperature >= sensor2_danger)
-      {
-        Serial.println("DANGER!!");
-        digitalWrite(LED2_GREEN, LOW);
-        digitalWrite(LED2_YELLOW, LOW);
-        digitalWrite(LED2_RED, HIGH);
-      }
-      else if (temperature >= sensor2_warning && temperature < sensor2_danger)
-      {
-        Serial.println("WARNING");
-        digitalWrite(LED2_GREEN, LOW);
-        digitalWrite(LED2_YELLOW, HIGH);
-        digitalWrite(LED2_RED, LOW);
-      }
-      else
-      {
-        Serial.println("NO RESULT");
-        digitalWrite(LED2_GREEN, LOW);
-        digitalWrite(LED2_YELLOW, LOW);
-        digitalWrite(LED2_RED, HIGH);
-      }
-    }
-    else
-    {
-      ledBlinking();
-    }
+    Serial.println("Safe");
+    digitalWrite(LED2_GREEN, HIGH);
+    digitalWrite(LED2_YELLOW, LOW);
+    digitalWrite(LED2_RED, LOW);
+  }
+  else if (temperature2 >= sensor2_danger)
+  {
+    Serial.println("DANGER!!");
+    digitalWrite(LED2_GREEN, LOW);
+    digitalWrite(LED2_YELLOW, LOW);
+    digitalWrite(LED2_RED, HIGH);
+  }
+  else if (temperature2 >= sensor2_warning && temperature2 < sensor2_danger)
+  {
+    Serial.println("WARNING");
+    digitalWrite(LED2_GREEN, LOW);
+    digitalWrite(LED2_YELLOW, HIGH);
+    digitalWrite(LED2_RED, LOW);
   }
 }
 
-void thirdBMPReader(int temp_id, float temp_warning, float temp_danger)
+void thirdBMPChecker()
 {
-  temperature = bmp3.readTemperature();
-  pressure = bmp3.readPressure();
-
-  if (temp_id != 0 || temp_warning != 0 || temp_danger != 0)
+  Serial.print("Third BMP Result : ");
+  if (temperature3 < sensor3_warning)
   {
-    if (sensor3_id != temp_id || sensor3_warning != temp_warning || sensor3_danger != temp_danger)
-    {
-      sensor3_id = temp_id;
-      sensor3_warning = temp_warning;
-      sensor3_danger = temp_danger;
-    }
-    Serial.println("--------- BMP280 3 ---------");
-
-    Serial.print("BMP ID : ");
-    Serial.print(sensor3_id);
-    Serial.print("  Warning : ");
-    Serial.print(sensor3_warning);
-    Serial.print("  Danger : ");
-    Serial.println(sensor3_danger);
-
-    Serial.print("Temperature : ");
-    Serial.print(temperature);
-    Serial.print("  Pressure : ");
-    Serial.println(pressure);
-
-    response = postHttp(sensor3_id, temperature, pressure);
-    Serial.print("Code : ");
-    Serial.println(response);
-    Serial.println();
-
-    if (response > 0)
-    {
-      Serial.print("BMP Result : ");
-      if (temperature < sensor3_warning)
-      {
-        Serial.println("Safe");
-        digitalWrite(LED3_GREEN, HIGH);
-        digitalWrite(LED3_YELLOW, LOW);
-        digitalWrite(LED3_RED, LOW);
-      }
-      else if (temperature >= sensor3_danger)
-      {
-        Serial.println("DANGER!!");
-        digitalWrite(LED3_GREEN, LOW);
-        digitalWrite(LED3_YELLOW, LOW);
-        digitalWrite(LED3_RED, HIGH);
-      }
-      else if (temperature >= sensor3_warning && temperature < sensor3_danger)
-      {
-        Serial.println("WARNING");
-        digitalWrite(LED3_GREEN, LOW);
-        digitalWrite(LED3_YELLOW, HIGH);
-        digitalWrite(LED3_RED, LOW);
-      }
-      else
-      {
-        Serial.println("NO RESULT");
-        digitalWrite(LED3_GREEN, LOW);
-        digitalWrite(LED3_YELLOW, LOW);
-        digitalWrite(LED3_RED, HIGH);
-      }
-    }
-    else
-    {
-      ledBlinking();
-    }
+    Serial.println("Safe");
+    digitalWrite(LED3_GREEN, HIGH);
+    digitalWrite(LED3_YELLOW, LOW);
+    digitalWrite(LED3_RED, LOW);
+  }
+  else if (temperature3 >= sensor3_danger)
+  {
+    Serial.println("DANGER!!");
+    digitalWrite(LED3_GREEN, LOW);
+    digitalWrite(LED3_YELLOW, LOW);
+    digitalWrite(LED3_RED, HIGH);
+  }
+  else if (temperature3 >= sensor3_warning && temperature3 < sensor3_danger)
+  {
+    Serial.println("WARNING");
+    digitalWrite(LED3_GREEN, LOW);
+    digitalWrite(LED3_YELLOW, HIGH);
+    digitalWrite(LED3_RED, LOW);
   }
 }
 
@@ -447,8 +380,6 @@ void setup()
 
 void loop()
 {
-  int temp_id = 0;
-  float temp_warning = 0, temp_danger = 0;
   StaticJsonDocument<1024> buff;
 
   if (getPlantResponse())
@@ -456,24 +387,36 @@ void loop()
     deserializeJson(buff, getPlantResponse());
     JsonObject obj = buff.as<JsonObject>();
 
-    temp_id = obj[String("data")][0][String("id")];
-    temp_warning = obj[String("data")][0][String("set_point")][String("warning")];
-    temp_danger = obj[String("data")][0][String("set_point")][String("danger")];
+    sensor1_warning = obj[String("data")][0][String("set_point")][String("warning")];
+    sensor1_danger = obj[String("data")][0][String("set_point")][String("danger")];
 
-    firstBMPReader(temp_id, temp_warning, temp_danger);
+    sensor2_warning = obj[String("data")][1][String("set_point")][String("warning")];
+    sensor2_danger = obj[String("data")][1][String("set_point")][String("danger")];
 
-    temp_id = obj[String("data")][1][String("id")];
-    temp_warning = obj[String("data")][1][String("set_point")][String("warning")];
-    temp_danger = obj[String("data")][1][String("set_point")][String("danger")];
-
-    secondBMPReader(temp_id, temp_warning, temp_danger);
-
-    temp_id = obj[String("data")][2][String("id")];
-    temp_warning = obj[String("data")][2][String("set_point")][String("warning")];
-    temp_danger = obj[String("data")][2][String("set_point")][String("danger")];
-
-    thirdBMPReader(temp_id, temp_warning, temp_danger);
-
-    delay(delayLoop);
+    sensor3_warning = obj[String("data")][2][String("set_point")][String("warning")];
+    sensor3_danger = obj[String("data")][2][String("set_point")][String("danger")];
   }
+
+  firstBMPReader();
+  secondBMPReader();
+  thirdBMPReader();
+
+  response = postHttp(temperature1, pressure1, temperature2, pressure2, temperature3, pressure3);
+  Serial.print("Code : ");
+  Serial.println(response);
+  Serial.println();
+
+  if (response == 201)
+  {
+    firstBMPChecker();
+    secondBMPChecker();
+    thirdBMPChecker();
+  }
+  else
+  {
+    Serial.println("NO RESULT");
+    ledBlinking();
+  }
+
+  delay(delayLoop);
 }
