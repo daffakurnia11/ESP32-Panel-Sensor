@@ -387,14 +387,14 @@ void loop()
     deserializeJson(buff, getPlantResponse());
     JsonObject obj = buff.as<JsonObject>();
 
-    sensor1_warning = obj[String("data")][0][String("set_point")][String("warning")];
-    sensor1_danger = obj[String("data")][0][String("set_point")][String("danger")];
+    sensor1_warning = obj[String("data")][0][String("set_point")][String("warning1")];
+    sensor1_danger = obj[String("data")][0][String("set_point")][String("danger1")];
 
-    sensor2_warning = obj[String("data")][1][String("set_point")][String("warning")];
-    sensor2_danger = obj[String("data")][1][String("set_point")][String("danger")];
+    sensor2_warning = obj[String("data")][0][String("set_point")][String("warning2")];
+    sensor2_danger = obj[String("data")][0][String("set_point")][String("danger2")];
 
-    sensor3_warning = obj[String("data")][2][String("set_point")][String("warning")];
-    sensor3_danger = obj[String("data")][2][String("set_point")][String("danger")];
+    sensor3_warning = obj[String("data")][0][String("set_point")][String("warning3")];
+    sensor3_danger = obj[String("data")][0][String("set_point")][String("danger3")];
   }
 
   firstBMPReader();
